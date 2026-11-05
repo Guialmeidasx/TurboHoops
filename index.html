@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TURBO HOOPS – Basketball on Wheels</title>
+
+<style>
+/* ===================== 1. BASE ===================== */
+:root{--az:#1e90ff;--lj:#ff7a00;--pt:#07090f}
+*{box-sizing:border-box;margin:0}
+body{background:var(--pt);color:#fff;font-family:'Trebuchet MS',Arial,sans-serif;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+.hide{display:none!important}
+.az{color:var(--az);text-shadow:0 0 24px var(--az)}
+.lj{color:var(--lj);text-shadow:0 0 24px var(--lj)}
+
+/* ===================== 2. TIPOGRAFIA ===================== */
+h1,h2,.pl,#msg{font-family:Impact,'Arial Black',sans-serif;font-style:italic;letter-spacing:1px}
+h1{font-size:clamp(3rem,9vw,6rem);line-height:.95}
+h2{color:var(--lj);font-size:2rem}
+.sub{letter-spacing:.6em;color:#b8c4e0;margin-bottom:18px}
+
+/* ===================== 3. TELAS ===================== */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 7vw;background:linear-gradient(90deg,rgba(7,9,15,.9),rgba(7,9,15,.05) 70%)}
+.screen.c{align-items:center;text-align:center;background:rgba(7,9,15,.8)}
+nav,.col{display:flex;flex-direction:column;gap:12px;max-width:380px}
+
+/* ===================== 4. COMPONENTES ===================== */
+.btn{padding:14px 26px;border:2px solid var(--az);background:rgba(10,26,58,.7);color:#fff;font:700 1.05rem 'Trebuchet MS',sans-serif;letter-spacing:2px;cursor:pointer;transform:skewX(-8deg);transition:.15s}
+.btn:hover{background:var(--az);box-shadow:0 0 22px var(--az);transform:skewX(-8deg) translateX(8px)}
+.btn.pri{border-color:var(--lj);background:rgba(255,122,0,.2)}
+.btn.pri:hover{background:var(--lj);box-shadow:0 0 22px var(--lj)}
+input[type=range]{width:100%}
+label{display:flex;flex-direction:column;gap:6px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{padding:10px 14px;border:2px solid #334;background:#0a1a3a;color:#fff;cursor:pointer;font:inherit}
+.opt.on{border-color:var(--lj);box-shadow:0 0 14px var(--lj)}
+.sw{width:34px;height:34px;border-radius:50%;border:3px solid #334;cursor:pointer}
+.sw.on{border-color:#fff}
+.bar{height:10px;background:#1a2440;margin:3px 0 8px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--az),var(--lj))}
+
+/* ===================== 5. HUD ===================== */
+#hud{position:fixed;inset:0;pointer-events:none}
+.pl{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:rgba(7,9,15,.8);border:2px solid #223;padding:8px 22px}
+.pl span{font-size:2.4rem}
+.pl i{font-style:normal;background:#fff;color:#000;padding:4px 12px;min-width:90px;text-align:center}
+#msg{position:absolute;top:30%;width:100%;text-align:center;font-size:4.5rem;text-shadow:0 0 30px var(--lj)}
+.tb{position:absolute;bottom:24px;right:24px;width:260px;height:18px;border:2px solid #fff;background:rgba(0,0,0,.6);transform:skewX(-12deg)}
+#tbf{height:100%;background:linear-gradient(90deg,var(--az),var(--lj))}
+.dica{position:absolute;bottom:20px;left:20px;font-size:.85rem;color:#9ab}
+</style>
+</head>
+
+<body>
+<canvas id="c"></canvas>
+
+<!-- ===================== TELAS ===================== -->
+<section id="menu" class="screen">
+  <h1><span class="az">TURBO</span> <span class="lj">HOOPS</span></h1>
+  <p class="sub">BASKETBALL ON WHEELS</p>
+  <nav>
+    <button class="btn pri" id="bJogar">Iniciar partida</button>
+    <button class="btn" id="bGaragem">Garagem</button>
+    <button class="btn" id="bCfg">Configurações</button>
+  </nav>
+</section>
+
+<section id="garagem" class="screen hide">
+  <h2>Garagem</h2>
+  <div class="col">
+    <div class="opts" id="tipos"></div>
+    <div class="opts" id="cores"></div>
+    <div id="stats"></div>
+    <button class="btn pri" id="bSalvar">Confirmar</button>
+  </div>
+</section>
+
+<section id="config" class="screen hide">
+  <h2>Configurações</h2>
+  <div class="col">
+    <label>Volume dos efeitos<input type="range" id="cVol" min="0" max="100"></label>
+    <button class="btn pri" id="bCfgOk">Confirmar</button>
+  </div>
+</section>
+
+<section id="fim" class="screen c hide">
+  <h1 id="fTit"></h1>
+  <h2 id="fPlac"></h2>
+  <p id="fInfo"></p>
+  <nav>
+    <button class="btn pri" id="bRev">Jogar novamente</button>
+    <button class="btn" id="bMenu">Menu principal</button>
+  </nav>
+</section>
+
+<!-- ===================== HUD ===================== -->
+<div id="hud" class="hide">
+  <div class="pl"><b class="az">VOCÊ</b><span id="pA">0</span><i id="tmp">3:00</i><span id="pB">0</span><b class="lj">CPU</b></div>
+  <div id="msg"></div>
+  <div class="tb"><div id="tbf"></div></div>
+  <p class="dica">A/D ou ←/→ mover · W/↑/Espaço pular (2x) · Shift ou S turbo · P pausa · Esc sair</p>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   TURBO HOOPS – Basketball on Wheels
+   HTML + CSS + JavaScript puro (Canvas 2D). Sem bibliotecas, sem servidor, sem banco de dados.
+
+   Camadas:
+     1. config      constantes do jogo e volume
+     2. util        funções auxiliares
+     3. model       classes POO: Turbo, Carro (+ especializações), Bola, Cesta,
+                    Colisao, Equipe, Placar, Jogador, IA, Partida
+     4. view        View (desenho no canvas) e Hud (placar e mensagens)
+     5. controller  Entrada (teclado) e App (telas, fluxo do jogo, loop)
+   ===================================================================== */
+
+/* ===================== 1. CONFIG ===================== */
+const CFG = {
+  ARENA:   { MX: 30, ALTURA: 22, CESTA_X: 26.5, CESTA_Y: 9, ARO_R: 2.1 },
+  BOLA:    { RAIO: 1.3, GRAVIDADE: 22, REST_CHAO: .74, REST_PAREDE: .7, ATRITO: .6 },
+  CARRO:   { GRAVIDADE: 30, PULO_1: 17, PULO_2: 15, MULT_VEL_TURBO: 1.5, MULT_ACEL_TURBO: 1.8,
+             TURBO_GASTO: 34, TURBO_RECARGA: 9, LIMITE_X: 28.2 },
+  PARTIDA: { TEMPO: 180, CONTAGEM: 3, PAUSA_CESTA: 2.4, DIST_LONGA: 16, PTS_NORMAL: 2, PTS_LONGA: 3 },
+  CORES:   ['#1e90ff', '#ff7a00', '#ffffff', '#2ecc71', '#e84393', '#f1c40f']
+};
+const Config = { vol: 70 };
+
+/* ===================== 2. UTIL ===================== */
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const Som = {
+  ctx: null,
+  bip(freq, dur = .1, tipo = 'square') {
+    if (!Config.vol) return;
+    try {
+      this.ctx = this.ctx || new AudioContext();
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = tipo; o.frequency.value = freq; g.gain.value = .08 * Config.vol / 100;
+      o.connect(g); g.connect(this.ctx.destination); o.start();
+      g.gain.exponentialRampToValueAtTime(.0001, this.ctx.currentTime + dur); o.stop(this.ctx.currentTime + dur);
+    } catch (e) { /* áudio indisponível: ignora */ }
+  }
+};
+
+/* ===================== 3. MODEL ===================== */
+
+/** Turbo: gerencia a energia (0–100). */
+class Turbo {
+  constructor() { this.energia = 100; this.ativo = false; }
+  usar(dt, quer) {
+    if (quer && this.energia > 0) { this.energia = Math.max(0, this.energia - CFG.CARRO.TURBO_GASTO * dt); this.ativo = this.energia > 0; }
+    else { this.ativo = false; this.energia = Math.min(100, this.energia + CFG.CARRO.TURBO_RECARGA * dt); }
+  }
+}
+
+/** Carro: classe base (abstração + encapsulamento da velocidade). Subclasses sobrescrevem info, dim e velMax. */
+class Carro {
+  #vx = 0;
+  static info = { nome: 'Equilibrado', vel: 5, forca: 5, ctrl: 5 };
+
+  constructor(cor, neon) {
+    this.cor = cor; this.neon = neon;
+    this.x = 0; this.y = 0; this.vy = 0; this.sentido = 1; this.noChao = true; this.pulos = 0;
+    this.turbo = new Turbo(); this.equipeIdx = 0; this.ataque = 1;
+  }
+
+  /* atributos polimórficos */
+  get info()   { return this.constructor.info; }
+  get dim()    { return [4, 1.4]; }                    // [comprimento, altura]
+  get velMax() { return 15 + this.info.vel * 1.4; }
+  get acel()   { return 30 + this.info.vel * 4; }
+  get chute()  { return .6 + this.info.forca * .1; }
+  get vx()     { return this.#vx; }
+
+  amortecer(fator) { this.#vx *= fator; }
+  reiniciar(x, sentido) { this.x = x; this.y = 0; this.vy = 0; this.#vx = 0; this.sentido = sentido; this.pulos = 0; this.noChao = true; this.turbo.energia = 100; }
+
+  /** cmd = { dir:-1..1, turbo:bool, pulo:bool (toque), cima:bool (segurando) } */
+  atualizar(dt, cmd) {
+    const C = CFG.CARRO, t = this.turbo;
+    t.usar(dt, cmd.turbo);
+    const vmax = this.velMax * (t.ativo ? C.MULT_VEL_TURBO : 1);
+    const ac = this.acel * (t.ativo ? C.MULT_ACEL_TURBO : 1) * (this.noChao ? 1 : .45);
+
+    if (cmd.dir) { this.#vx += cmd.dir * ac * dt; this.sentido = cmd.dir; }
+    else this.#vx *= Math.pow(this.noChao ? .15 : .7, dt);
+    if (t.ativo) this.#vx += this.sentido * ac * dt * .8;
+    this.#vx = clamp(this.#vx, -vmax, vmax);
+
+    if (cmd.pulo && this.pulos < 2) { this.vy = this.pulos ? C.PULO_2 : C.PULO_1; this.pulos++; this.noChao = false; }
+    if (!this.noChao && t.ativo && cmd.cima) this.vy += 40 * dt;     // turbo no ar com pulo pressionado: sobe
+    this.vy -= C.GRAVIDADE * dt; this.y += this.vy * dt;
+    const teto = CFG.ARENA.ALTURA - this.dim[1];
+    if (this.y > teto) { this.y = teto; this.vy = Math.min(this.vy, 0); }
+    if (this.y <= 0) { this.y = 0; this.vy = 0; this.noChao = true; this.pulos = 0; }
+
+    this.x += this.#vx * dt;
+    if (Math.abs(this.x) > C.LIMITE_X) { this.x = Math.sign(this.x) * C.LIMITE_X; this.#vx = 0; }
+  }
+}
+class CarroRapido extends Carro {
+  static info = { nome: 'Relâmpago', vel: 8, forca: 3, ctrl: 6 };
+  get dim()    { return [4.4, 1.2]; }
+  get velMax() { return super.velMax + 1.5; }
+}
+class CarroForte extends Carro {
+  static info = { nome: 'Titã', vel: 4, forca: 9, ctrl: 4 };
+  get dim() { return [3.8, 1.6]; }
+}
+const TIPOS_CARRO = [Carro, CarroRapido, CarroForte];
+
+/** Bola: posição, velocidade e física simples. */
+class Bola {
+  constructor() { this.raio = CFG.BOLA.RAIO; this.rot = 0; this.reiniciar(); }
+  reiniciar() { this.x = 0; this.y = 8; this.vx = 0; this.vy = 0; this.ultimoToque = -1; this.xToque = 0; }
+  atualizar(dt) {
+    const B = CFG.BOLA, r = this.raio, mx = CFG.ARENA.MX;
+    this.vy -= B.GRAVIDADE * dt; this.x += this.vx * dt; this.y += this.vy * dt;
+    if (this.y < r) { this.y = r; this.vy = Math.abs(this.vy) > 2 ? -this.vy * B.REST_CHAO : 0; this.vx *= Math.pow(B.ATRITO, dt); }
+    if (this.y > CFG.ARENA.ALTURA - r) { this.y = CFG.ARENA.ALTURA - r; this.vy *= -.5; }
+    if (Math.abs(this.x) > mx - r) { this.x = Math.sign(this.x) * (mx - r); this.vx *= -B.REST_PAREDE; }
+    this.rot += this.vx * dt / r;
+  }
+}
+
+/** Cesta: aro, assistência de mira e detecção de pontuação. lado: +1 (direita) ou -1 (esquerda). */
+class Cesta {
+  constructor(lado, timeAlvo, cor) {
+    const A = CFG.ARENA; this.lado = lado; this.timeAlvo = timeAlvo; this.cor = cor;
+    this.x = lado * A.CESTA_X; this.y = A.CESTA_Y;
+    this.extremos = [this.x - lado * A.ARO_R, this.x + lado * A.ARO_R];   // pontas do aro (colidem com a bola)
+  }
+  /** Leve atração em direção ao aro (torna o jogo jogável). */
+  assistir(bola, dt) {
+    const dx = this.x - bola.x;
+    if (Math.abs(dx) < 7 && bola.y > this.y - 1 && bola.y < this.y + 7 && bola.vy < 4) {
+      bola.vx += dx * 4 * dt; if (Math.abs(dx) < 4) bola.vx *= Math.pow(.5, dt);
+    }
+  }
+  /** Cesta válida: a bola cruza o aro de cima para baixo, dentro da abertura. */
+  verificar(bola, yAnterior) {
+    return yAnterior >= this.y && bola.y < this.y && bola.vy < 0 && Math.abs(bola.x - this.x) < CFG.ARENA.ARO_R - .2;
+  }
+}
+
+/** Colisao: detecção e tratamento de impactos. `flash(x,y)` é um callback visual. */
+class Colisao {
+  static carroBola(carro, bola, flash) {
+    const r = .75;
+    for (const o of [-1, 1]) {                    // 2 círculos aproximam o corpo do carro
+      const cx = carro.x + o * (carro.dim[0] / 2 - .8), cy = carro.y + .75;
+      const dx = bola.x - cx, dy = bola.y - cy, d = Math.hypot(dx, dy);
+      if (d >= r + bola.raio || d < .001) continue;
+      const nx = dx / d, ny = dy / d;
+      bola.x = cx + nx * (r + bola.raio); bola.y = cy + ny * (r + bola.raio);
+      const vn = (bola.vx - carro.vx) * nx + (bola.vy - carro.vy) * ny;
+      if (vn >= 0) continue;
+      const s = Math.abs(carro.vx) + 3, k = -vn * 1.45 + carro.chute * s * .25;
+      bola.vx += nx * k; bola.vy += ny * k + 3 + carro.chute * s * .15 + Math.max(0, carro.vy) * .5;
+      bola.ultimoToque = carro.equipeIdx; bola.xToque = bola.x;
+      flash(bola.x, bola.y); Som.bip(170, .08);
+    }
+  }
+  static bolaPonto(bola, px, py, rest = .6) {     // pontas do aro
+    const dx = bola.x - px, dy = bola.y - py, d = Math.hypot(dx, dy);
+    if (d >= bola.raio + .2 || d < .001) return;
+    const nx = dx / d, ny = dy / d; bola.x = px + nx * (bola.raio + .2); bola.y = py + ny * (bola.raio + .2);
+    const vn = bola.vx * nx + bola.vy * ny;
+    if (vn < 0) { bola.vx -= (1 + rest) * vn * nx; bola.vy -= (1 + rest) * vn * ny; }
+  }
+  static carroCarro(a, b, flash) {
+    const dx = a.x - b.x, ov = 4 - Math.abs(dx);
+    if (ov <= 0 || Math.abs(a.y - b.y) > 1.4) return;
+    const s = dx >= 0 ? 1 : -1; a.x += s * ov / 2; b.x -= s * ov / 2;
+    flash((a.x + b.x) / 2, Math.max(a.y, b.y) + .7);
+  }
+}
+
+class Equipe { constructor(nome) { this.nome = nome; this.jogadores = []; } add(j) { j.equipe = this; this.jogadores.push(j); return this; } }
+class Placar { constructor() { this.pts = [0, 0]; } adicionar(i, p) { this.pts[i] += p; } get empate() { return this.pts[0] === this.pts[1]; } }
+
+/** Jogador: nome, carro e origem do comando (humano ou IA). Time 0 ataca a cesta direita; time 1, a esquerda. */
+class Jogador {
+  constructor(nome, carro, humano, idx) { this.nome = nome; this.carro = carro; this.humano = humano; carro.equipeIdx = idx; carro.ataque = idx === 0 ? 1 : -1; }
+  comando(bola) { return this.humano ? Entrada.comando() : IA.decidir(this.carro, bola); }
+}
+
+/** IA: posiciona-se atrás da bola e a empurra em direção à cesta adversária; salta para levantá-la. */
+class IA {
+  static decidir(c, b) {
+    const atk = c.ataque, dist = Math.abs(b.x - c.x), atras = (b.x - c.x) * atk > -1.5;   // atras: carro está atrás da bola
+    if (atras) return { dir: atk, turbo: dist > 12 && c.turbo.energia > 30,
+      pulo: dist < 7 && b.y > 1.8 && c.noChao && Math.random() < .05, cima: !c.noChao && dist < 9 && b.y > c.y + 1 };
+    return { dir: -atk, turbo: dist > 8 && c.turbo.energia > 40, pulo: dist < 6 && c.noChao, cima: false };   // contorna a bola por cima
+  }
+}
+
+/** Partida: rodadas, cronômetro, prorrogação e pontuação. Comunica-se via `ev` (flash, aviso, cesta, terminou). */
+class Partida {
+  constructor(a, b, bola, cestas, ev) {
+    Object.assign(this, { a, b, bola, cestas, ev });
+    this.placar = new Placar(); this.tempo = CFG.PARTIDA.TEMPO; this.prorrogacao = false;
+    this.fim = false; this.pausado = false; this.longas = 0; this.espera = 0; this.aoFimEspera = null;
+    this.iniciarRodada();
+  }
+  iniciarRodada() {
+    this.a.carro.reiniciar(-12, 1); this.b.carro.reiniciar(12, -1); this.bola.reiniciar();
+    this.espera = CFG.PARTIDA.CONTAGEM; this.aoFimEspera = null;
+  }
+  pontuar(cesta) {
+    const P = CFG.PARTIDA, dist = Math.abs(this.bola.xToque - cesta.x);
+    const pts = (this.bola.ultimoToque >= 0 && dist > P.DIST_LONGA) ? P.PTS_LONGA : P.PTS_NORMAL;
+    this.placar.adicionar(cesta.timeAlvo, pts); if (cesta.timeAlvo === 0 && pts === P.PTS_LONGA) this.longas++;
+    this.ev.cesta(cesta, pts);
+    this.espera = P.PAUSA_CESTA; this.aoFimEspera = this.prorrogacao ? () => this.terminar() : () => this.iniciarRodada();
+  }
+  terminar() { this.fim = true; this.ev.terminou(this); }
+
+  atualizar(dt) {
+    if (this.fim || this.pausado) return;
+    if (this.espera > 0) { this.#atualizarEspera(dt); return; }
+    if (!this.prorrogacao && this.#atualizarRelogio(dt)) return;
+
+    for (const j of [this.a, this.b]) j.carro.atualizar(dt, j.comando(this.bola));
+    Colisao.carroCarro(this.a.carro, this.b.carro, this.ev.flash);
+    Colisao.carroBola(this.a.carro, this.bola, this.ev.flash);
+    Colisao.carroBola(this.b.carro, this.bola, this.ev.flash);
+
+    const yAnterior = this.bola.y; this.bola.atualizar(dt);
+    for (const c of this.cestas) {
+      for (const px of c.extremos) Colisao.bolaPonto(this.bola, px, c.y);
+      c.assistir(this.bola, dt);
+      if (c.verificar(this.bola, yAnterior)) { this.pontuar(c); break; }
+    }
+  }
+  #atualizarEspera(dt) {
+    this.espera -= dt;
+    if (this.espera <= 0) {
+      if (this.aoFimEspera) { const f = this.aoFimEspera; this.aoFimEspera = null; f(); } else this.ev.aviso('JÁ!', 700);
+    } else if (!this.aoFimEspera) this.ev.aviso(Math.ceil(this.espera) + '');
+  }
+  /** Retorna true quando o relógio encerrou o fluxo normal deste quadro. */
+  #atualizarRelogio(dt) {
+    this.tempo -= dt; if (this.tempo > 0) return false;
+    this.tempo = 0;
+    if (this.placar.empate) { this.prorrogacao = true; this.iniciarRodada(); this.ev.aviso('PRORROGAÇÃO!', 2000); } else this.terminar();
+    return true;
+  }
+}
+
+/* ===================== 4. VIEW ===================== */
+
+/** View: desenha a arena, os carros, a bola e os efeitos no canvas 2D (coordenadas do mundo em metros, y para cima). */
+const View = {
+  particulas: [], tremor: 0,
+  init() { this.g = $('c').getContext('2d'); addEventListener('resize', () => this.redimensionar()); this.redimensionar(); },
+  redimensionar() {
+    const cv = $('c'), d = Math.min(devicePixelRatio || 1, 2);
+    cv.width = innerWidth * d; cv.height = innerHeight * d; this.W = cv.width; this.H = cv.height;
+    this.chao = this.H * .84; this.S = Math.min(this.W / 64, (this.chao - 24) / CFG.ARENA.ALTURA);
+  },
+  X(x) { return this.W / 2 + x * this.S; },
+  Y(y) { return this.chao - y * this.S; },
+
+  /* efeitos */
+  faiscas(x, y, n = 10, cor = '#ffe08a', v = 8) {
+    for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = Math.random() * v; this.particulas.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s + 2, vida: .4 + Math.random() * .5, cor }); }
+  },
+  atualizarFx(dt) {
+    for (const p of this.particulas) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy -= 12 * dt; p.vida -= dt; }
+    this.particulas = this.particulas.filter(p => p.vida > 0); this.tremor = Math.max(0, this.tremor - dt);
+  },
+
+  /* cena */
+  iniciarQuadro(t) {
+    const g = this.g, S = this.S, W = this.W, H = this.H, A = CFG.ARENA;
+    g.save(); if (this.tremor > 0) g.translate((Math.random() - .5) * this.tremor * 24, (Math.random() - .5) * this.tremor * 24);
+    const fundo = g.createLinearGradient(0, 0, 0, H); fundo.addColorStop(0, '#05070d'); fundo.addColorStop(.7, '#0b1d40'); fundo.addColorStop(1, '#05070d');
+    g.fillStyle = fundo; g.fillRect(-30, -30, W + 60, H + 60);
+    g.strokeStyle = 'rgba(30,144,255,.09)'; g.lineWidth = 1;
+    for (let x = -A.MX; x <= A.MX; x += 5) { g.beginPath(); g.moveTo(this.X(x), this.Y(A.ALTURA)); g.lineTo(this.X(x), this.chao); g.stroke(); }
+    for (let y = 0; y <= A.ALTURA; y += 5) { g.beginPath(); g.moveTo(this.X(-A.MX), this.Y(y)); g.lineTo(this.X(A.MX), this.Y(y)); g.stroke(); }
+    const a = .6 + .4 * Math.sin(t * 3), b = .6 + .4 * Math.cos(t * 3), L = this.X(-A.MX), larg = 2 * A.MX * S;     // LEDs
+    g.fillStyle = `rgba(30,144,255,${a})`; g.fillRect(L, this.Y(A.ALTURA) - 5, larg, 5);
+    g.fillStyle = `rgba(255,122,0,${b})`; g.fillRect(L - 5, this.Y(A.ALTURA), 5, this.chao - this.Y(A.ALTURA)); g.fillRect(L + larg, this.Y(A.ALTURA), 5, this.chao - this.Y(A.ALTURA));
+    const piso = g.createLinearGradient(0, this.chao, 0, H); piso.addColorStop(0, '#12306a'); piso.addColorStop(1, '#05070d');
+    g.fillStyle = piso; g.fillRect(L - 5, this.chao, larg + 10, H - this.chao);
+    g.fillStyle = '#fff'; g.shadowColor = '#1e90ff'; g.shadowBlur = 14; g.fillRect(L - 5, this.chao - 2, larg + 10, 3); g.shadowBlur = 0;
+    g.setLineDash([8, 10]); g.lineWidth = 2;                                                       // linhas de 3 pontos e meio da quadra
+    for (const [x, cor] of [[-A.CESTA_X + CFG.PARTIDA.DIST_LONGA, 'rgba(30,144,255,.4)'], [A.CESTA_X - CFG.PARTIDA.DIST_LONGA, 'rgba(255,122,0,.4)'], [0, 'rgba(255,255,255,.2)']]) {
+      g.strokeStyle = cor; g.beginPath(); g.moveTo(this.X(x), this.chao); g.lineTo(this.X(x), this.Y(A.ALTURA)); g.stroke();
+    }
+    g.setLineDash([]); g.fillStyle = 'rgba(255,255,255,.5)'; g.font = `${Math.round(S * .9)}px Impact, sans-serif`; g.textAlign = 'center';
+    g.fillText('3 PTS', this.X(-A.CESTA_X + CFG.PARTIDA.DIST_LONGA), this.chao + S * 1.6); g.fillText('3 PTS', this.X(A.CESTA_X - CFG.PARTIDA.DIST_LONGA), this.chao + S * 1.6);
+  },
+  fimQuadro() { this.g.restore(); },
+
+  cesta(c) {
+    const g = this.g, S = this.S, l = c.lado, cx = this.X(c.x), cy = this.Y(c.y), r = CFG.ARENA.ARO_R * S;
+    g.fillStyle = '#1b2540'; g.fillRect(this.X(l * 29.5) - 3, cy, 6, this.chao - cy);
+    const bx = this.X(l * 29.6), top = this.Y(14);
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(bx - 5, top, 10, 5 * S);
+    g.strokeStyle = c.cor; g.lineWidth = 2; g.strokeRect(bx - 5, top, 10, 5 * S);
+    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; const yb = cy + 2.2 * S;
+    for (let i = 0; i <= 4; i++) {
+      const xt = cx - r + 2 * r * i / 4, xb = cx - r * .5 + r * i / 4, xc = cx + r * .5 - r * i / 4;
+      g.beginPath(); g.moveTo(xt, cy); g.lineTo(xb, yb); g.moveTo(xt, cy); g.lineTo(xc, yb); g.stroke();
+    }
+    g.strokeStyle = c.cor; g.lineWidth = 5; g.shadowColor = c.cor; g.shadowBlur = 16;
+    g.beginPath(); g.moveTo(cx - r, cy); g.lineTo(cx + r, cy); g.stroke(); g.shadowBlur = 0;
+  },
+
+  bola(b) {
+    const g = this.g, r = b.raio * this.S, px = this.X(b.x), py = this.Y(b.y);
+    g.save(); g.translate(px, py); g.beginPath(); g.arc(0, 0, r, 0, 7); g.clip();
+    const gr = g.createRadialGradient(-r * .3, -r * .3, r * .1, 0, 0, r); gr.addColorStop(0, '#ffa040'); gr.addColorStop(1, '#d96000');
+    g.fillStyle = gr; g.fillRect(-r, -r, 2 * r, 2 * r);
+    g.rotate(b.rot); g.strokeStyle = '#1a0d00'; g.lineWidth = Math.max(2, r * .09);
+    g.beginPath(); g.moveTo(-r, 0); g.lineTo(r, 0); g.moveTo(0, -r); g.lineTo(0, r); g.stroke();
+    g.beginPath(); g.arc(-r * 1.45, 0, r * 1.1, 0, 7); g.moveTo(r * 2.55, 0); g.arc(r * 1.45, 0, r * 1.1, 0, 7); g.stroke();
+    g.restore();
+  },
+
+  /** Desenha um carro com base em (px,py) = ponto central inferior na tela e `e` = pixels por metro. */
+  carro(c, px, py, e) {
+    const g = this.g, [L, H] = c.dim, bt = H * .62;
+    g.save(); g.translate(px, py); g.scale(c.sentido, 1); g.rotate(-clamp(c.vy * .025, -.35, .35));
+    if (c.turbo.ativo) {                                                    // chama do turbo
+      const f = 1.3 + Math.random() * .9; g.fillStyle = '#ff9d2e'; g.shadowColor = '#ff7a00'; g.shadowBlur = 18;
+      g.beginPath(); g.moveTo(-L / 2 * e, -.5 * e); g.lineTo((-L / 2 - f) * e, -.7 * e); g.lineTo(-L / 2 * e, -.9 * e); g.fill(); g.shadowBlur = 0;
+      if (Math.random() < .6) this.faiscas(c.x - c.sentido * (L / 2 + .5), c.y + .7, 1, '#ff9d2e', 3);
+    }
+    g.fillStyle = c.neon; g.shadowColor = c.neon; g.shadowBlur = 18; g.fillRect(-L / 2 * e, -.2 * e, L * e, .12 * e); g.shadowBlur = 0;
+    g.fillStyle = c.cor; this.rr(-L / 2 * e, -bt * e - .3 * e, L * e, bt * e, .22 * e); g.fill();
+    g.fillStyle = '#0f1a30'; g.beginPath();
+    g.moveTo(-L * .3 * e, (-bt - .3) * e); g.lineTo(-L * .18 * e, -(H + .3) * e); g.lineTo(L * .1 * e, -(H + .3) * e); g.lineTo(L * .28 * e, (-bt - .3) * e); g.fill();
+    g.fillStyle = 'rgba(120,190,255,.35)'; g.fillRect(-L * .14 * e, -(H + .22) * e, L * .22 * e, (H - bt - .1) * e);
+    g.fillStyle = '#fff'; g.fillRect((L / 2 - .35) * e, (-bt - .25) * e, .3 * e, .2 * e);
+    for (const wx of [-L * .3, L * .3]) { g.fillStyle = '#111'; g.beginPath(); g.arc(wx * e, -.4 * e, .4 * e, 0, 7); g.fill(); g.strokeStyle = '#aab'; g.lineWidth = 2; g.stroke(); }
+    g.restore();
+  },
+  rr(x, y, w, h, r) { const g = this.g; g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); },
+
+  desenharParticulas() { const g = this.g; for (const p of this.particulas) { g.globalAlpha = clamp(p.vida * 2, 0, 1); g.fillStyle = p.cor; g.fillRect(this.X(p.x), this.Y(p.y), 4, 4); } g.globalAlpha = 1; }
+};
+
+/** Hud: placar, cronômetro, turbo e mensagens durante a partida. */
+const Hud = {
+  aviso(texto, ms) { const m = $('msg'); m.textContent = texto; clearTimeout(Hud.timer); if (ms) Hud.timer = setTimeout(() => m.textContent = '', ms); },
+  atualizar(p) {
+    const t = Math.ceil(p.tempo);
+    $('pA').textContent = p.placar.pts[0]; $('pB').textContent = p.placar.pts[1];
+    $('tmp').textContent = p.prorrogacao ? 'PRORROG.' : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    $('tbf').style.width = p.a.carro.turbo.energia + '%';
+  }
+};
+
+/* ===================== 5. CONTROLLER ===================== */
+
+/** Entrada: teclado. Atalhos de sistema delegam ao App. */
+const Entrada = {
+  teclas: {}, pulou: false,
+  init() {
+    addEventListener('keydown', e => {
+      this.teclas[e.code] = true;
+      if (['KeyW', 'ArrowUp', 'Space'].includes(e.code)) { if (!e.repeat) this.pulou = true; }
+      if (App.estado !== 'jogo') return;
+      if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+      if (e.code === 'KeyP') App.partida.pausado = !App.partida.pausado;
+      if (e.code === 'Escape') App.voltarMenu();
+    });
+    addEventListener('keyup', e => { delete this.teclas[e.code]; });
+  },
+  comando() {
+    const k = this.teclas, cmd = {
+      dir: (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0),
+      turbo: !!(k.ShiftLeft || k.ShiftRight || k.KeyS || k.ArrowDown),
+      cima: !!(k.KeyW || k.ArrowUp || k.Space), pulo: this.pulou };
+    this.pulou = false; return cmd;
+  }
+};
+
+/** App: máquina de estados (menu, garagem, jogo, fim), telas e loop principal. */
+const App = {
+  estado: 'menu', partida: null, t0: 0, demo: [], bolaDemo: null,
+  garagem: { tipo: 0, cor: CFG.CORES[0] },
+  cestas: [new Cesta(1, 0, '#ff7a00'), new Cesta(-1, 1, '#1e90ff')],
+
+  init() { View.init(); Entrada.init(); this.bolaDemo = new Bola(); this.criarDemo(); this.ligarEventos(); requestAnimationFrame(ms => this.loop(ms)); },
+
+  /** Carros exibidos no menu e na garagem (usa a escolha atual do jogador). */
+  criarDemo() {
+    const g = this.garagem, corCpu = g.cor.toLowerCase() === '#ff7a00' ? '#1e90ff' : '#ff7a00';
+    const a = new TIPOS_CARRO[g.tipo](g.cor, '#1e90ff'), b = new TIPOS_CARRO[(g.tipo + 1) % 3](corCpu, '#ff7a00');
+    a.reiniciar(-10, 1); b.reiniciar(10, -1); this.demo = [a, b];
+  },
+  ir(tela, estado) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hide')); $('hud').classList.add('hide');
+    $(tela).classList.remove('hide'); if (estado) this.estado = estado;
+  },
+  voltarMenu() { this.partida = null; Hud.aviso(''); this.criarDemo(); this.ir('menu', 'menu'); },
+
+  /* --- partida --- */
+  iniciarPartida() {
+    const g = this.garagem, corCpu = g.cor.toLowerCase() === '#ff7a00' ? '#1e90ff' : '#ff7a00';
+    const a = new Jogador('Você', new TIPOS_CARRO[g.tipo](g.cor, '#1e90ff'), true, 0);
+    const b = new Jogador('CPU', new TIPOS_CARRO[Math.floor(Math.random() * 3)](corCpu, '#ff7a00'), false, 1);
+    const ev = {
+      flash: (x, y) => View.faiscas(x, y, 8),
+      aviso: Hud.aviso,
+      cesta: (c, pts) => {
+        Hud.aviso((c.timeAlvo === 0 ? 'VOCÊ' : 'CPU') + ' +' + pts + (pts === CFG.PARTIDA.PTS_LONGA ? ' · LONGA DISTÂNCIA!' : '!'), 2200);
+        View.faiscas(c.x, c.y, 60, c.cor, 14); View.tremor = .35; Som.bip(520, .3, 'sawtooth');
+      },
+      terminou: p => this.finalizar(p)
+    };
+    this.partida = new Partida(a, b, new Bola(), this.cestas, ev); this.ir('hud', 'jogo');
+  },
+  finalizar(p) {
+    const [x, y] = p.placar.pts, venceu = x > y;
+    $('fTit').innerHTML = venceu ? '<span class="az">VITÓRIA!</span>' : '<span class="lj">DERROTA</span>';
+    $('fPlac').textContent = x + ' x ' + y + (p.prorrogacao ? ' (prorrogação)' : '');
+    $('fInfo').textContent = 'Cestas de longa distância: ' + p.longas;
+    Som.bip(venceu ? 700 : 200, .5, 'triangle'); Hud.aviso(''); this.ir('fim', 'fim');
+  },
+
+  /* --- telas --- */
+  telaGaragem() {
+    const g = this.garagem, T = TIPOS_CARRO[g.tipo].info; this.criarDemo();
+    $('tipos').innerHTML = ''; TIPOS_CARRO.forEach((C, i) => {
+      const b = document.createElement('button'); b.className = 'opt' + (i === g.tipo ? ' on' : ''); b.textContent = C.info.nome;
+      b.onclick = () => { g.tipo = i; this.telaGaragem(); }; $('tipos').appendChild(b);
+    });
+    $('cores').innerHTML = ''; CFG.CORES.forEach(c => {
+      const s = document.createElement('div'); s.className = 'sw' + (c === g.cor ? ' on' : ''); s.style.background = c;
+      s.onclick = () => { g.cor = c; this.telaGaragem(); }; $('cores').appendChild(s);
+    });
+    $('stats').innerHTML = [['Velocidade', T.vel], ['Força', T.forca], ['Controle', T.ctrl]].map(([n, v]) => `<div>${n}</div><div class="bar"><i style="width:${v * 10}%"></i></div>`).join('');
+    this.ir('garagem', 'garagem');
+  },
+
+  ligarEventos() {
+    $('bJogar').onclick = $('bRev').onclick = () => this.iniciarPartida();
+    $('bMenu').onclick = () => this.voltarMenu();
+    $('bGaragem').onclick = () => this.telaGaragem();
+    $('bSalvar').onclick = () => this.voltarMenu();
+    $('bCfg').onclick = () => { $('cVol').value = Config.vol; this.ir('config', 'menu'); };
+    $('bCfgOk').onclick = () => { Config.vol = +$('cVol').value; Som.bip(440, .1); this.ir('menu', 'menu'); };
+  },
+
+  /* --- loop principal --- */
+  loop(ms) {
+    requestAnimationFrame(t => this.loop(t));
+    const t = ms / 1000, dt = Math.min(.05, t - this.t0); this.t0 = t;
+    View.iniciarQuadro(t); for (const c of this.cestas) View.cesta(c);
+
+    if (this.estado === 'jogo' && this.partida) {
+      const p = this.partida; p.atualizar(dt); Hud.atualizar(p);
+      for (const j of [p.a, p.b]) View.carro(j.carro, View.X(j.carro.x), View.Y(j.carro.y), View.S);
+      View.bola(p.bola);
+    } else if (this.estado === 'garagem') {
+      const c = this.demo[0], e = View.S * 2.4; c.sentido = 1;
+      View.carro(c, View.W * .68, View.H * .62 + Math.sin(t * 2) * 4, e); View.g.fillStyle = 'rgba(0,0,0,.35)'; View.g.beginPath(); View.g.ellipse(View.W * .68, View.H * .62 + 10, 2.4 * e, .3 * e, 0, 0, 7); View.g.fill();
+    } else {
+      const b = this.bolaDemo; if (b.y < b.raio + .05 && Math.abs(b.vy) < 1) { b.vy = 15; b.vx = (Math.random() - .5) * 10; }
+      b.atualizar(dt); for (const c of this.demo) View.carro(c, View.X(c.x), View.Y(c.y), View.S);
+      View.bola(b);
+    }
+    View.desenharParticulas(); View.atualizarFx(dt); View.fimQuadro();
+  }
+};
+
+App.init();
+</script>
+</body>
+</html>
